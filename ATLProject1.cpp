@@ -1,4 +1,6 @@
 // ATLProject1.cpp : Implementation of WinMain
+// Author: Milos Ilic <ilkesd91@gmail.com>
+// Date: 10.07.2021.
 
 
 #include "pch.h"
@@ -8,8 +10,17 @@
 
 
 using namespace ATL;
+using namespace std;
 
-#include <stdio.h>
+#include <thread>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <psapi.h>
+
+#include "Microphone.h"
+#include "Users.h"
+#include "FocusApp.h"
 
 class CATLProject1Module : public ATL::CAtlServiceModuleT< CATLProject1Module, IDS_SERVICENAME >
 {
@@ -29,12 +40,64 @@ public :
 
 CATLProject1Module _AtlModule;
 
+#define INFO_BUFFER_SIZE 32767
+TCHAR  name[INFO_BUFFER_SIZE];
+DWORD  bufCharCount = INFO_BUFFER_SIZE;
 
+void microphoneThread() {
+	ofstream out;
+	
+	while (true) {
+		out.open("c:\\log-camera.txt");
+
+		if (IsMicrophoneRecording()) {
+			out << "active microphone: yes" << '\n';
+			out.flush();
+		}
+		else {
+			out << "active microphone: no" << '\n';
+			out.flush();
+		}
+
+		out.close();
+
+		Sleep(1000);
+	}
+}
+
+void usersThread() {
+	GetComputerName(name, &bufCharCount);
+
+	while (true) {
+		DisplayLocalLogons(name);
+
+		DisplaySessionLogons(name);
+
+		Sleep(1000);
+	}
+}
+
+void focusAppThread() {
+	while (true) {
+		getActiveApp();
+
+		Sleep(1000);
+	}
+}
 
 //
 extern "C" int WINAPI _tWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/,
 								LPTSTR /*lpCmdLine*/, int nShowCmd)
 {
+	thread t1(microphoneThread);
+	thread t2(usersThread);
+	thread t3(focusAppThread);
+
+	t3.join();
+	t2.join();
+	t1.join();
+
+
 	return _AtlModule.WinMain(nShowCmd);
 }
 
